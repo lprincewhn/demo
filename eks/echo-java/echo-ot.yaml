@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-java-ot
+  labels:
+    app: echo-java-ot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-java-ot
+  template:
+    metadata:
+      labels:
+        app: echo-java-ot
+      annotations:
+        prometheus.io/scrape: 'true'
+        prometheus.io/path: '/actuator/prometheus'
+    spec:
+      containers:
+      - name: echo-java-ot
+        image: 597377428377.dkr.ecr.ap-northeast-1.amazonaws.com/echo-java:latest
+        ports:
+        - containerPort: 8080
+        - containerPort: 7005
+        imagePullPolicy: Always
+        env:
+          #- name: OTEL_EXPORTER_OTLP_ENDPOINT
+          #  value: "http://otel-trace-collector.aws-otel-eks:4317"
+          - name: OTEL_RESOURCE_ATTRIBUTES
+            value: "ClusterName=eksdemo,service.namespace=AWSObservability,service.name=EchoJavaOt,cloud.provider=aws,cloud.platform=aws_eks,aws.eks.cluster.arn=arn:aws:eks:ap-northeast-1:597377428377:cluster/eksdemo,aws.log.group.arns=arn:aws:logs:ap-northeast-1:597377428377:log-group:/aws/containerinsights/eksdemo/application"
+          - name: aws.eks.cluster
+            value: eksdemo
+          #- name: aws.log.group.arns
+          #  value: arn:aws:logs:ap-northeast-1:597377428377:log-group:/aws/containerinsights/eksdemo/application:*
+          - name: JAVA_TOOL_OPTIONS
+            value: "-javaagent:/app/aws-opentelemetry-agent.jar -javaagent:/app/jmx_prometheus_javaagent-0.17.0.jar=7005:/app/jmx-agent/jmx_config.yaml"
+          - name: OTEL_IMR_EXPORT_INTERVAL 
+            value: "10000"
+          - name: OTEL_METRICS_EXPORTER
+            value: "none"
+          - name: OTEL_TRACES_SAMPLER
+            value: "xray"
+      serviceAccountName: echo-ot
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo-java-ot
+  name: echo-java-ot
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: echo-java-ot
+  type: LoadBalancer

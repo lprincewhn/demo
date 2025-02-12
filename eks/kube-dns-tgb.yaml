@@ -1,0 +1,12 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kube-dns 
+  namespace: kube-system 
+spec:
+  ipAddressType: ipv4
+  serviceRef:
+    name: kube-dns 
+    port: 53 
+  targetGroupARN: arn:aws:elasticloadbalancing:ap-northeast-1:597377428377:targetgroup/kube-dns/93576fbbe59616fa 
+  targetType: ip 

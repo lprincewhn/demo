@@ -1,0 +1,467 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: prometheus 
+  name: yace 
+  labels:
+    app: yace 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: yace 
+  template:
+    metadata:
+      labels:
+        app: yace 
+    spec:
+      containers:
+      - name: yace 
+        image: ghcr.io/nerdswords/yet-another-cloudwatch-exporter:v0.55.0
+        args:
+         - '--config.file=/tmp/config.yml'
+         - '--scraping-interval=60'
+         - '--debug' 
+        ports:
+        - containerPort: 5000 
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /tmp
+          name: yace
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false 
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: yace 
+        name: yace
+      serviceAccountName: yace
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: prometheus
+  labels:
+    app: yace
+  name: yace
+data:
+  config.yml: |
+    apiVersion: v1alpha1
+    discovery:
+      exportedTagsOnMetrics:
+        ec2:
+          - Name
+          - Project
+          - Team
+        ebs:
+          - Name
+          - Project
+          - Team
+        rds:
+          - Name
+          - Project
+          - Team
+        elasticache:
+          - Name
+          - Project
+          - Team
+        es:
+          - Name
+          - Project
+          - Team
+        alb:
+          - Name
+          - Project
+          - Team
+        nlb:
+          - Name
+          - Project
+          - Team
+        s3:
+          - Name
+          - Project
+          - Team
+        kafka:
+          - Name
+          - Project
+          - Team
+      jobs:
+      - type: ec2
+        period: 60
+        length: 600
+        addCloudwatchTimestamp: true
+        regions:
+          - ap-northeast-1
+        searchTags:
+          - key: Project 
+            value: eksdemo 
+        dimensionNameRequirements:
+          - InstanceId
+        metrics:
+          - name: CPUUtilization
+            statistics:
+            - Average
+      #     - name: StatusCheckFailed_System
+      #       statistics:
+      #       - Maximum
+      #     - name: StatusCheckFailed_Instance
+      #       statistics:
+      #       - Maximum
+      #     - name: NetworkPacketsIn
+      #       statistics:
+      #       - Sum
+      #     - name: NetworkPacketsOut
+      #       statistics:
+      #       - Sum
+      #     - name: NetworkIn
+      #       statistics:
+      #       - Sum
+      #     - name: NetworkOut
+      #       statistics:
+      #       - Sum
+      # - type: ebs
+      #   period: 60
+      #   length: 600
+      #   addCloudwatchTimestamp: true
+      #   regions:
+      #     - ap-northeast-1
+      #   metrics:
+      #     - name: BurstBalance
+      #       statistics:
+      #         - Minimum
+      - type: rds
+        period: 60
+        length: 600
+        addCloudwatchTimestamp: true
+        regions:
+          - ap-northeast-1
+        dimensionNameRequirements:
+          - DBInstanceIdentifier 
+        metrics:
+          - name: CPUUtilization
+            statistics:
+            - Average
+          - name: SwapUsage
+            statistics:
+            - Maximum
+          - name: FreeableMemory
+            statistics:
+            - Minimum
+      #     - name: FreeStorageSpace
+      #       statistics:
+      #       - Minimum
+      #     - name: ReadIOPS
+      #       statistics:
+      #       - Maximum
+      #     - name: WriteIOPS
+      #       statistics:
+      #       - Maximum
+      #     - name: ReadLatency
+      #       statistics:
+      #       - Maximum
+      #     - name: ReadThroughput
+      #       statistics:
+      #       - Maximum
+      #     - name: ReplicaLag
+      #       statistics:
+      #       - Maximum
+      #     - name: WriteLatency
+      #       statistics:
+      #       - Maximum  
+      #     - name: WriteThroughput
+      #       statistics:
+      #       - Maximum
+      - type: AWS/ElastiCache
+        period: 60
+        length: 600
+        addCloudwatchTimestamp: true
+        regions:
+          - ap-northeast-1
+        dimensionNameRequirements:
+          - CacheClusterId
+        metrics:
+          - name: CPUUtilization
+            statistics:
+            - Average
+          # - name: EngineCPUUtilization
+          #   statistics:
+          #   - Average
+          # - name: SwapUsage
+          #   statistics:
+          #   - Maximum
+          # - name: Evictions
+          #   statistics:
+          #   - Sum
+          # - name: CurrConnections
+          #   statistics:
+          #   - Average
+          # - name: NewConnections
+          #   statistics:
+          #   - Sum
+          # - name: DatabaseMemoryUsagePercentage
+          #   statistics:
+          #   - Average
+          # - name: CacheHitRate
+          #   statistics:
+          #   - Average
+          # - name: StringBasedCmdsLatency
+          #   statistics:
+          #   - Average
+          # - name: ReplicationLag
+          #   statistics:
+          #   - Average
+          # - name: SaveInProgress
+          #   statistics:
+          #   - Maximum
+      # - type: es
+      #   period: 60
+      #   length: 600
+      #   addCloudwatchTimestamp: true
+      #   regions:
+      #     - ap-northeast-1
+      #   metrics:
+      #     - name: CPUUtilization
+      #       statistics:
+      #       - Average
+      #     - name: WarmCPUUtilization
+      #       statistics:
+      #       - Average
+      #     - name: JVMMemoryPressure
+      #       statistics:
+      #       - Average
+      #     - name: WarmJVMMemoryPressure
+      #       statistics:
+      #       - Average
+      #     - name: MasterCPUUtilization
+      #       statistics:
+      #       - Average
+      #     - name: MasterJVMMemoryPressure
+      #       statistics:
+      #       - Average
+      #     - name: FreeStorageSpace
+      #       statistics:
+      #       - Minimum
+      #     - name: ClusterStatus.yellow
+      #       statistics:
+      #       - Maximum
+      #     - name: ClusterStatus.red
+      #       statistics:
+      #       - Maximum
+      #     - name: ClusterIndexWritesBlocked
+      #       statistics:
+      #       - Maximum
+      #     - name: AutomatedSnapshotFailure
+      #       statistics:
+      #       - Maximum
+      #     - name: KMSKeyError
+      #       statistics:
+      #       - Maximum
+      #     - name: KMSKeyInaccessible
+      #       statistics:
+      #       - Maximum
+      #     - name: Nodes
+      #       statistics:
+      #       - Minimum
+      #     - name: SearchRate
+      #       statistics:
+      #       - Average
+      #     - name: IndexingRate
+      #       statistics:
+      #       - Average
+      #     - name: SearchLatency
+      #       statistics:
+      #       - Average
+      #     - name: IndexingLatency
+      #       statistics:
+      #       - Average
+      #     - name: JVMGCOldCollectionCount
+      #       statistics:
+      #       - Maximum
+      #     - name: JVMGCOldCollectionTime
+      #       statistics:
+      #       - Maximum
+      #     - name: 5xx
+      #       statistics:
+      #       - Sum
+      # - type: s3
+      #   period: 60
+      #   length: 600
+      #   addCloudwatchTimestamp: true
+      #   regions:
+      #     - ap-northeast-1
+      #   metrics:
+      #     - name: AllRequests 
+      #       statistics:
+      #         - Sum
+      #     - name: GetRequests 
+      #       statistics:
+      #         - Sum
+      #     - name: PutRequests 
+      #       statistics:
+      #         - Sum
+      #     - name: BytesDownloaded 
+      #       statistics:
+      #         - Sum
+      #     - name: 4xxErrors
+      #       statistics:
+      #         - Sum
+      #         - Average
+      #     - name: 5xxErrors
+      #       statistics:
+      #         - Sum
+      #         - Average
+      #     - name: FirstByteLatency 
+      #       statistics:
+      #         - Average
+      #     - name: TotalRequestLatency
+      #       statistics:
+      #         - Average
+      #     - name: ReplicationLatency
+      #       statistics:
+      #         - Average
+      - type: alb
+        period: 60
+        length: 600
+        addCloudwatchTimestamp: true
+        regions:
+          - ap-northeast-1
+        dimensionNameRequirements:
+          - LoadBalancer
+        metrics:
+          - name: ActiveConnectionCount
+            statistics: 
+              - Average
+          - name: NewConnectionCount
+            statistics: 
+              - Sum
+          - name: RequestCount
+            statistics: 
+              - Sum
+          - name: ProcessedBytes
+            statistics: 
+              - Sum
+          - name: HTTPCode_ELB_5XX_Count
+            statistics: 
+              - Sum
+          - name: HTTPCode_Target_5XX_Count
+            statistics: 
+              - Sum
+      - type: alb
+        period: 60
+        length: 600
+        addCloudwatchTimestamp: true
+        regions:
+          - ap-northeast-1
+        dimensionNameRequirements:
+          - LoadBalancer
+          - TargetGroup
+        metrics:
+          - name: UnHealthyHostCount
+            statistics: 
+              - Maximum
+          - name: TargetResponseTime
+            statistics: 
+              - Average
+          - name: TargetConnectionErrorCount
+            statistics: 
+              - Sum
+          - name: TargetTLSNegotiationErrorCount
+            statistics: 
+              - Sum
+      # - type: nlb
+      #   period: 60
+      #   length: 600
+      #   addCloudwatchTimestamp: true
+      #   regions:
+      #     - ap-northeast-1
+      #   metrics:
+      #     - name: UnHealthyHostCount
+      #       statistics: 
+      #         - Maximum
+      #     - name: ActiveFlowCount
+      #       statistics: 
+      #         - Average
+      #     - name: NewFlowCount
+      #       statistics: 
+      #         - Sum
+      #     - name: PeakBytesPerSecond
+      #       statistics: 
+      #         - Average
+      #     - name: PeakPacketsPerSecond
+      #       statistics: 
+      #         - Average
+      #     - name: ProcessedBytes
+      #       statistics: 
+      #         - Sum
+      #     - name: ProcessedPackets
+      #       statistics: 
+      #         - Sum
+      # - type: kafka
+      #   period: 60
+      #   length: 600
+      #   addCloudwatchTimestamp: true
+      #   regions:
+      #     - ap-northeast-1
+      #   metrics:
+      #     - name: CpuSystem
+      #       statistics:
+      #         - Average
+      #     - name: CpuUser
+      #       statistics:
+      #         - Average
+      #     - name: MemoryFree
+      #       statistics:
+      #         - Average
+      #     - name: MemoryUsed
+      #       statistics:
+      #         - Average
+      #     - name: KafkaDataLogsDiskUsed
+      #       statistics:
+      #         - Average
+      #     - name: ConnectionCount
+      #       statistics:
+      #         - Average
+      #     - name: MessagesInPerSec
+      #       statistics:
+      #         - Average
+      #     - name: MaxOffsetLag
+      #       statistics:
+      #         - Average
+      #     - name: BytesInPerSec
+      #       statistics:
+      #         - Average
+      #     - name: BytesOutPerSec
+      #       statistics:
+      #         - Average
+      #     - name: NetworkRxDropped
+      #       statistics:
+      #         - Sum
+      #     - name: NetworkRxPackets
+      #       statistics:
+      #         - Sum
+      #     - name: NetworkTxDropped
+      #       statistics:
+      #         - Sum
+      #     - name: NetworkTxDropped
+      #       statistics:
+      #         - Sum
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: prometheus
+  labels:
+    app: yace 
+  name: yace 
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: 'true'
+    prometheus.io/scrape: 'true'
+spec:
+  ports:
+  - port: 80 
+    protocol: TCP
+    targetPort: 5000 
+  selector:
+    app: yace 
+  type: LoadBalancer

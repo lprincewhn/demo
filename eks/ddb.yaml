@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ddb-data
+  namespace: ddb
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: ddb 
+  name: ddb-server 
+  labels:
+    app: ddb-server 
+spec:
+  replicas: 3 
+  selector:
+    matchLabels:
+      app: ddb-server 
+  template:
+    metadata:
+      labels:
+        app: ddb-server 
+    spec:
+      containers:
+      - name: ddb-server 
+        image: amazon/dynamodb-local:latest
+        args: 
+          - -jar
+          - DynamoDBLocal.jar 
+          - -sharedDb
+          - -dbPath 
+          - ./data
+        ports:
+        - containerPort: 8000 
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /home/dynamodblocal/data 
+          name: data 
+        securityContext:
+          allowPrivilegeEscalation: false 
+      volumes:
+        - name: data 
+          persistentVolumeClaim:
+            claimName: ddb-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: ddb
+  labels:
+    app: ddb-server
+  name: ddb 
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+spec:
+  ports:
+  - port: 80 
+    protocol: TCP
+    targetPort: 8000 
+  selector:
+    app: ddb-server 
+  type: LoadBalancer
+

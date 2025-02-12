@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: proxysql 
+  name: proxysql-server 
+  labels:
+    app: proxysql-server 
+spec:
+  replicas: 1 
+  selector:
+    matchLabels:
+      app: proxysql-server 
+  template:
+    metadata:
+      labels:
+        app: proxysql-server 
+    spec:
+      containers:
+      - name: proxysql-server 
+        image: proxysql/proxysql:2.1.0
+        ports:
+        - containerPort: 6033 
+        - containerPort: 6032
+        - containerPort: 6070
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /etc/proxysql.cnf
+          name: conf
+          subPath: proxysql.cnf
+        securityContext:
+          allowPrivilegeEscalation: false
+      volumes:
+        - name: conf
+          configMap:
+            name: proxysql-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: proxysql 
+  labels:
+    app: proxysql-server
+  name: proxysql 
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+spec:
+  ports:
+  - name: admin
+    port: 6032 
+    protocol: TCP
+    targetPort: 6032 
+  - name: data
+    port: 3306 
+    protocol: TCP
+    targetPort: 6033
+  selector:
+    app: proxysql-server 
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxysql-conf
+  namespace: proxysql
+data:
+  proxysql.cnf: |
+    datadir="/var/lib/proxysql"
+    admin_variables=
+    {
+        admin_credentials="admin:admin1234;radmin:Admin!234"
+        mysql_ifaces="0.0.0.0:6032"
+    }
+    mysql_variables=
+    {
+        threads=4
+        max_connections=2048
+        default_query_delay=0
+        default_query_timeout=36000000
+        have_compress=true
+        poll_timeout=2000
+        interfaces="0.0.0.0:6033"
+        default_schema="information_schema"
+        stacksize=1048576
+        server_version="8.0.35"
+        connect_timeout_server=3000
+        monitor_username="admin"
+        monitor_password="Admin!234"
+        monitor_history=600000
+        monitor_connect_interval=60000
+        monitor_ping_interval=10000
+        monitor_read_only_interval=1500
+        monitor_read_only_timeout=500
+        ping_interval_server_msec=120000
+        ping_timeout_server=500
+        commands_stats=true
+        sessions_sort=true
+        connect_retries_on_failure=10
+    }
+    mysql_servers=
+    (
+      {
+        address = "svhw-mysql-01.cqu3h6tjnld7.ap-northeast-1.rds.amazonaws.com"
+        port = 3306
+        hostgroup = 1
+      }
+    )
+    mysql_users=
+    (
+      {
+        username = "admin" 
+        password = "Admin!234" 
+        default_hostgroup = 1
+      }
+    )
