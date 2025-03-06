@@ -1,0 +1,28 @@
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+    name: eksdemo1
+    region: ap-northeast-1
+# privateCluster:
+#   enabled: true
+vpc:
+    id: vpc-0fa219345714af743
+    subnets:
+        # public:
+        #     public-one:
+        #         id: subnet-061467f94154494c5
+        #     public-two:
+        #         id: subnet-0dcf7aa58d0796f5d
+        #     public-three:
+        #         id: subnet-0a315126928f4d6d4
+        private:
+            private-one:
+                # id: subnet-015b2235351bfe194 # without NAT, should by used with privateCluster is enabled.
+                id: subnet-0dfba9cbf1a243eb4 # with NAT
+            private-two:
+                # id: subnet-04507727015e1a200 # without NAT, should by used with privateCluster is enabled.
+                id: subnet-053dc36a6eee2fd5d # with NAT
+            private-three:
+                # id: subnet-013c72bc5cd2a79de # without NAT, should by used with privateCluster is enabled.
+                id: subnet-0df398e3d5080a264 # with NAT
