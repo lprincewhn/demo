@@ -2,14 +2,24 @@ terraform {
   required_providers {
     volcengine = {
       source = "volcengine/volcengine"
-      version = "0.0.173"
+      version = "0.0.174"
     }
   }
 }
 
+variable "access_key" {
+  description = "火山引擎访密钥"
+  type        = string
+}
+
+variable "secret_key" {
+  description = "火山引擎访密钥"
+  type        = string
+}
+
 provider "volcengine" {
-  access_key = "<access-key>"
-  secret_key = "<secret-key>"
+  access_key = var.access_key
+  secret_key = var.secret_key
   region = "cn-guangzhou"
 }
 
