@@ -1,0 +1,180 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-headless
+  namespace: tls-kibana
+spec:
+  selector:
+    app: elasticsearch
+  clusterIP: None
+  ports:
+  - port: 9200
+    targetPort: 9200
+    name: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch-statefulset
+  namespace: tls-kibana
+spec:
+  selector:
+    matchLabels:
+      app: elasticsearch
+  serviceName: elasticsearch-headless
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+      - name: elasticsearch
+        image: svhw-cn-guangzhou.cr.volces.com/tls-kibana/elasticsearch:7.17.26
+        ports:
+        - containerPort: 9200
+        env:
+        - name: discovery.type
+          value: "single-node"
+        - name: ES_JAVA_OPTS
+          value: "-Xms512M -Xmx512M"
+        - name: ELASTIC_USERNAME
+          value: ""
+        - name: ELASTIC_PASSWORD
+          value: ""
+        - name: xpack.security.enabled
+          value: "true"
+        securityContext:
+          runAsUser: 1000
+          runAsGroup: 1000
+        volumeMounts:
+        - name: es-data
+          mountPath: /usr/share/elasticsearch/data
+  volumeClaimTemplates:
+  - metadata:
+      name: es-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "ebs-ssd"
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kproxy-service
+  namespace: tls-kibana
+spec:
+  selector:
+    app: kproxy
+  ports:
+  - port: 9201
+    targetPort: 9201
+    name: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kproxy-deployment
+  namespace: tls-kibana
+spec:
+  selector:
+    matchLabels:
+      app: kproxy
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kproxy
+    spec:
+      containers:
+      - name: kproxy
+        image: svhw-cn-guangzhou.cr.volces.com/tls-kibana/kproxy:1.0.12
+        ports:
+        - containerPort: 9201
+        env:
+        - name: ES_ENDPOINT
+          value: "elasticsearch-statefulset-0.elasticsearch-headless:9200"
+        - name: TLS_ENDPOINT
+          value: "https://tls-cn-guangzhou.volces.com/es/"
+        - name: TLS_PROJECT
+          value: "demo_vke"
+        - name: TLS_ACCESS_KEY_ID
+          value: ""
+        - name: TLS_ACCESS_KEY_SECRET
+          value: ""
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+  namespace: tls-kibana
+spec:
+  selector:
+    app: kibana
+  ports:
+  - port: 5601
+    targetPort: 5601
+    name: http
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kibana-ingress # 路由规则的名称
+  namespace: tls-kibana  # 路由规则所属的命名空间
+  annotations:
+    ingress.vke.volcengine.com/loadbalancer-port: "443" # 监听器端口号
+    ingress.vke.volcengine.com/loadbalancer-protocol: "https"  # 监听器协议。取值：http、https
+    ingress.vke.volcengine.com/loadbalancer-pass-through: "true" # 配置直通 Pod 模式
+spec:
+  ingressClassName: demo-alb  # ALBInstance 资源名称
+  rules:
+    - host: kibana.svhw.tech
+      http:
+        paths:
+        - pathType: Prefix # 路径匹配规则。取值：Exact（精确匹配）、Prefix（前缀匹配）
+          path: / # 请求匹配的路径
+          backend:
+            service:
+              name: kibana-service # 需要对接的服务名称
+              port: 
+                number: 5601 # 需要对接服务的端口号
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-deployment
+  namespace: tls-kibana
+spec:
+  selector:
+    matchLabels:
+      app: kibana
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: svhw-cn-guangzhou.cr.volces.com/tls-kibana/kibana:7.17.26
+        ports:
+        - containerPort: 5601
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://kproxy-service:9201"
+        - name: ELASTICSEARCH_USERNAME
+          value: ""
+        - name: ELASTICSEARCH_PASSWORD
+          value: ""
+        - name: XPACK_MONITORING_UI_CONTAINER_ELASTICSEARCH_ENABLED
+          value: "true"
+
+

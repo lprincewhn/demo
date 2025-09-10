@@ -63,7 +63,7 @@ resource "volcengine_vke_kubeconfig" "kube_config" {
 resource "volcengine_vke_node_pool" "vke-demo-ng1" {
   cluster_id = volcengine_vke_cluster.vke-demo.id
   name       = "ng1"
-  auto_scaling {
+  auto_scaling {  
     enabled          = true
     min_replicas     = 0
     max_replicas     = 5
@@ -133,6 +133,10 @@ resource "volcengine_vke_addon" "foo" {
   deploy_mode = "Unmanaged"
   depends_on = [volcengine_vke_node_pool.vke-demo-ng1]
   config = "{\"Resources\":{\"Requests\":{\"Cpu\":\"0.2\", \"Memory\":\"512Mi\"}}}"
+  # 必需插件无法在删除，因此保留，让其和集群一起删除，不会遗留无用资源
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 output "kube_config" {

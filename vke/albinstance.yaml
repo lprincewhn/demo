@@ -1,0 +1,31 @@
+apiVersion: loadbalancer.vke.volcengine.com/v1beta1
+kind: ALBInstance
+metadata:
+  name: demo-alb # ALBInstance 资源名称
+spec:
+  instance:
+    name: "demo-alb" # ALB 实例名称
+    zoneMappings: # ALB 实例位于多可用区的子网列表
+    - subnetId: "subnet-36sr4yz3w0ikg383g0wd52t3a" # 子网 ID，用于 ALB 实例在此可用区下的私网 IP 地址分配
+    - subnetId: "subnet-3ezazxgeqvncw72200ryjhddm" 
+    addressType: "public" # 负载均衡类型。取值：public（公网类型）、 private（私网类型）
+    eipSpec:
+      isp: "BGP" # 公网负载均衡实例的 EIP 线路类型。取值：BGP
+      bandwidth: 1 # 带宽上限。当 billingType 为 2 时，取值范围为 1～500Mbps；当 billingType 为 3 时，取值范围为 1～200Mbps
+      billingType: 3 # 计费类型。取值：2（按量计费-按带宽上限）、3（按量计费-按实际流量）
+    ipVersion: "ipv4" # IP 版本。取值：ipv4
+    deleteProtection: "off" # ALB 实例的删除保护功能，on 表示开启，off 表示关闭
+  blockCascadeDeletion: true # 删除 ALB Ingress 时，是否同步删除 ALBInstance
+  listeners:
+  - protocol: "HTTP" # 监听器的协议
+    port: 80 # 监听器协议为 HTTP 时的监听端口
+  - protocol: "HTTPS" # 监听器的协议
+    port: 443 # 监听器协议为 HTTPS 时的监听端口
+    certificateSource: "cert_center" # 监听器证书来源，取值：alb（ALB）、cert_center（证书中心）
+    certificateID: "cert-e9b63da45f9b42c0bffa02e8908d58ee" # 监听器协议为 HTTPS 时默认全域名使用的服务器证书
+    domainExtensions:
+    - domain: "echo.svhw.tech" # 监听器协议为 HTTPS 时支持指定域名绑定服务器证书
+      certificateSource: "cert_center" # 监听器证书来源，取值：alb（ALB）、cert_center（证书中心）
+      certificateID: "cert-9ff74ed2ccd644bf8fc4ac2ceb4b5a86" # 监听器协议为 HTTPS 时支持指定域名绑定服务器证书
+    enableHTTP2: false
+    enableQUIC: false

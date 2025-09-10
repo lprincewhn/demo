@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: kube-dns-ingress-https # 路由规则的名称
+  namespace: kube-system  # 路由规则所属的命名空间
+  annotations:
+    ingress.vke.volcengine.com/loadbalancer-port: "443" # 监听器端口号
+    ingress.vke.volcengine.com/loadbalancer-protocol: "https"  # 监听器协议。取值：http、https
+    ingress.vke.volcengine.com/loadbalancer-pass-through: "true" # 配置直通 Pod 模式
+spec:
+  ingressClassName: demo-alb  # ALBInstance 资源名称
+  rules:
+    - http:
+        paths:
+        - pathType: Prefix # 路径匹配规则。取值：Exact（精确匹配）、Prefix（前缀匹配）
+          path: / # 请求匹配的路径
+          backend:
+            service:
+              name: kube-dns # 需要对接的服务名称
+              port: 
+                number: 53 # 需要对接服务的端口号
+      # host: *.svhw.tech  # 需要对外提供访问的域名

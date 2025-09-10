@@ -1,0 +1,14 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pi1
+spec:
+  ttlSecondsAfterFinished: 0 
+  template:
+    spec:
+      containers:
+      - name: pi
+        image: svhw-cn-guangzhou.cr.volces.com/general/perl:5.34.0
+#        command: ["perl", "-Mbignum=bpi", "-wle", "print bpi(10000)"]
+        command: ["sleep", "30"]
+      restartPolicy: Never
